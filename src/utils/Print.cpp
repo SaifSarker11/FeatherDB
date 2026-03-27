@@ -1,7 +1,6 @@
 
 #include "Print.h"
 
-
 void printHelp()
 {
     std::cout << "FeatherDB Meta-Commands:\n";
@@ -11,11 +10,20 @@ void printHelp()
     std::cout << "  .schema <table>  Show schema for a table\n";
 }
 
-void printPrompt(){
-    std::cout << "featherDb> ";
+void printPrompt(const std::string &currentRole)
+{
+    if (currentRole.empty())
+    {
+        std::cout << "featherDb> ";
+    }
+    else
+    {
+        std::cout << "featherDb> (" << currentRole << ") ";
+    }
 }
 
-void printIntro(char* version){
+void printIntro(char *version)
+{
     std::cout << "FeatherDB" << " v" << version << std::endl;
     std::cout << "Type .help for instructions.\n";
 }

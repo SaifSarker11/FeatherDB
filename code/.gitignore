@@ -1,0 +1,5 @@
+*.exe
+*.csv
+*.schema
+PRESENTATION_GUIDE.md
+.env

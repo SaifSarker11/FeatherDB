@@ -1,0 +1,19 @@
+-- compile and run
+
+.\compile.bat
+.\build\featherdb.exe
+
+
+-- enter secret code to login
+
+
+-- crud
+create table users (id int primary key, name string);
+
+
+
+---  relationships
+-- many to many (jt)
+CREATE TABLE students (    student_id INT PRIMARY KEY,    student_name string);
+CREATE TABLE courses (    course_id INT PRIMARY KEY,    course_name string);
+CREATE TABLE student_course (sid int references students, cid int references courses);

@@ -19,7 +19,8 @@ bool Tokenizer::isKeyword(const std::string &str) const
 
 	static const std::vector<std::string> keywords = {
 		"SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "AND", "OR", "VALUES", "LIMIT",
-        "CREATE", "TABLE", "INTO", "SET", "ORDER", "BY", "INT", "STRING", "IN"};
+        "CREATE", "TABLE", "INTO", "SET", "ORDER", "BY", "INT", "STRING", "IN", "PRIMARY", "KEY", "REFERENCES",
+        "ROLE", "GRANT", "ON", "TO", "WITH", "SECRET", "DROP"};
 	for (const auto &keyword : keywords)
 	{
 		if (upperStr == keyword)

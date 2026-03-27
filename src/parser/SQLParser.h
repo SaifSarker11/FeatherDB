@@ -25,6 +25,9 @@ private:
 	std::unique_ptr<AST> parseUpdate();
 	std::unique_ptr<AST> parseDelete();
 	std::unique_ptr<AST> parseCreate();
+	std::unique_ptr<AST> parseDrop();
+	std::unique_ptr<AST> parseGrant();
+	std::unique_ptr<AST> parseCreateRole();
 	std::vector<std::string> parseIdentifierList();
 };
 

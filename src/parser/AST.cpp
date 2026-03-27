@@ -65,6 +65,15 @@ std::string DeleteStatement::toString() const
     oss << "DELETE FROM " << table;
     if (!condition.empty())
         oss << " WHERE " << condition;
-        std::printf("Statement deleted\n"); // TODO: rmv
+    return oss.str();
+}
+
+std::string GrantStatement::toString() const
+{
+    std::ostringstream oss;
+    oss << "GRANT ";
+    for (size_t i = 0; i < privileges.size(); ++i)
+        oss << privileges[i] << (i != privileges.size() - 1 ? ", " : "");
+    oss << " ON " << table << " TO " << role;
     return oss.str();
 }

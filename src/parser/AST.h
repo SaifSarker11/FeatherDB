@@ -85,4 +85,33 @@ public:
 	}
 };
 
+class CreateRoleStatement : public AST
+{
+public:
+	std::string roleName;
+	std::string secretKey;
+	CreateRoleStatement(const std::string &role, const std::string &secret) 
+		: AST("CREATE_ROLE"), roleName(role), secretKey(secret) {}
+	std::string toString() const override { return "CREATE ROLE " + roleName + " WITH SECRET '" + secretKey + "'"; }
+};
+
+class GrantStatement : public AST
+{
+public:
+	std::vector<std::string> privileges;
+	std::string table;
+	std::string role;
+	GrantStatement(const std::vector<std::string> &privs, const std::string &tbl, const std::string &r)
+		: AST("GRANT"), privileges(privs), table(tbl), role(r) {}
+	std::string toString() const override;
+};
+
+class DropStatement : public AST
+{
+public:
+	std::string tableName;
+	DropStatement(const std::string &table) : AST("DROP"), tableName(table) {}
+	std::string toString() const override { return "DROP TABLE " + tableName; }
+};
+
 #endif

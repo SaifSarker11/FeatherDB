@@ -91,8 +91,19 @@ The system follows a classic **Interpreter Pattern** pipeline where text input i
 **State Management**: Stateless.
 
 #### `Print.h/cpp` & `Validators.h/cpp`
-*   **Primary Responsibility**: Currently empty/stubs or for debugging.
-*   **Modding Impact**: Minimal. Safe to modify/remove without breaking core logic (unless code is added that relies on them).
+*   **Primary Responsibility**: Provides UI helpers like `printPrompt` (which dynamically shows the active role).
+*   **Modding Impact**: Minimal.
+
+---
+
+### **2.5. RBAC System (Security Layer)**
+**Core Logic**: Authentication via secret keys and authorization via permission tables.
+
+*   **Authentication**: Managed in `main.cpp`. The system identifies roles based on the entered secret key. Entering a key toggles the role (Login/Logout).
+*   **Authorization**: `StorageManager::checkPermission` validates if the `currentRole` has the necessary privilege (`SELECT`, `INSERT`, etc.) on a target table.
+*   **Security Hardening**:
+    - **No SET ROLE**: Role switching is blocked via SQL; must use secret keys.
+    - **Unique Roles**: `CREATE ROLE` verifies role non-existence before saving.
 
 ## 3. Trace a Request
 

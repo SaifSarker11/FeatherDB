@@ -31,7 +31,7 @@ The interactive REPL supports standard SQL commands and meta-commands.
 ### SQL Features
 - **CREATE TABLE**: Define new tables.
   ```sql
-  CREATE TABLE users (id INT, name STRING);
+  CREATE TABLE users (id INT PRIMARY KEY, name STRING);
   ```
 - **INSERT**: Add rows.
   ```sql

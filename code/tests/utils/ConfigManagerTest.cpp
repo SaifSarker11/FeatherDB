@@ -13,10 +13,14 @@ static void write_env(const std::string& content) {
     f << content;
 }
 
-//ConfigManager::get
+
+// ConfigManager GET Tests
+// These tests verify that ConfigManager correctly reads key-value pairs
+// from .env files, handles missing keys, whitespace trimming, and comments.
 
 void test_get_returns_value_for_existing_key() {
     std::cout << "test_get_returns_value_for_existing_key... ";
+    // Test that ConfigManager retrieves values for existing keys
     write_env("SECRET_PHRASE=mySecret\n");
     ConfigManager cfg(TEST_ENV);
     assert(cfg.get("SECRET_PHRASE") == "mySecret");
@@ -25,6 +29,7 @@ void test_get_returns_value_for_existing_key() {
 
 void test_get_returns_default_when_key_missing() {
     std::cout << "test_get_returns_default_when_key_missing... ";
+    // Verify that default values are returned when keys are not found
     write_env("OTHER_KEY=value\n");
     ConfigManager cfg(TEST_ENV);
     assert(cfg.get("MISSING_KEY", "fallback") == "fallback");
@@ -33,6 +38,7 @@ void test_get_returns_default_when_key_missing() {
 
 void test_get_returns_empty_string_when_key_missing_and_no_default() {
     std::cout << "test_get_returns_empty_string_when_key_missing_and_no_default... ";
+    // Check that empty string is returned when key is missing and no default provided
     write_env("A=1\n");
     ConfigManager cfg(TEST_ENV);
     assert(cfg.get("NOPE") == "");
@@ -41,6 +47,7 @@ void test_get_returns_empty_string_when_key_missing_and_no_default() {
 
 void test_get_trims_whitespace_around_value() {
     std::cout << "test_get_trims_whitespace_around_value... ";
+    // Ensure ConfigManager strips leading and trailing whitespace from values
     write_env("KEY =  trimmed  \n");
     ConfigManager cfg(TEST_ENV);
     assert(cfg.get("KEY") == "trimmed");
@@ -49,6 +56,7 @@ void test_get_trims_whitespace_around_value() {
 
 void test_comment_lines_are_ignored() {
     std::cout << "test_comment_lines_are_ignored... ";
+    // Verify that lines starting with # are properly ignored as comments
     write_env("# this is a comment\nREAL=yes\n");
     ConfigManager cfg(TEST_ENV);
     assert(cfg.get("REAL") == "yes");
@@ -58,6 +66,7 @@ void test_comment_lines_are_ignored() {
 
 void test_empty_lines_are_ignored() {
     std::cout << "test_empty_lines_are_ignored... ";
+    // Check that blank lines don't interfere with key-value parsing
     write_env("\n\nKEY=val\n\n");
     ConfigManager cfg(TEST_ENV);
     assert(cfg.get("KEY") == "val");
@@ -66,6 +75,7 @@ void test_empty_lines_are_ignored() {
 
 void test_missing_file_does_not_crash() {
     std::cout << "test_missing_file_does_not_crash... ";
+    // Ensure ConfigManager handles missing config files gracefully
     ConfigManager cfg("definitely_does_not_exist_xyz.env");
     assert(cfg.get("ANYTHING", "default") == "default");
     std::cout << "PASSED\n";
@@ -73,6 +83,7 @@ void test_missing_file_does_not_crash() {
 
 void test_multiple_keys_are_all_loaded() {
     std::cout << "test_multiple_keys_are_all_loaded... ";
+    // Verify that all key-value pairs are loaded when multiple are present
     write_env("A=1\nB=2\nC=3\n");
     ConfigManager cfg(TEST_ENV);
     assert(cfg.get("A") == "1");

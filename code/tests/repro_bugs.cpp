@@ -26,9 +26,6 @@ void runQuery(const std::string& query, std::string role = "admin") {
         SQLParser parser(tokenizer);
         std::unique_ptr<AST> ast = parser.parse();
         
-        // BUG 1: No check for trailing tokens in current implementation
-        // After fix, we should check tokenizer.hasNext() or similar
-        
         QueryExecutor executor;
         executor.execute(std::move(ast), role);
     } catch (const std::exception& e) {
@@ -36,8 +33,22 @@ void runQuery(const std::string& query, std::string role = "admin") {
     }
 }
 
+
+// BUG REPRODUCTION Tests
+// These tests reproduce known issues in the database system including:
+// - Trailing garbage handling
+// - Semicolon enforcement
+// - Multi-word string literals
+// - Math expression evaluation
+// - Unique constraint enforcement
+// - Type checking in UPDATE statements
+// - Referential integrity validation
+// - Foreign key position handling
+
 void test_bug1_trailing_garbage() {
     std::cout << "test_bug1_trailing_garbage... ";
+    // BUG 1: Parser accepts trailing garbage text after valid SQL statements
+    // Expected: Reject statements with unparsed tokens remaining
     StorageManager::dropTable(T + "B1");
     // This should FAIL but currently succeeds (ignores trailing garbage)
     std::string output;
@@ -57,6 +68,8 @@ void test_bug1_trailing_garbage() {
 
 void test_bug2_semicolon_enforcement() {
     std::cout << "test_bug2_semicolon_enforcement... ";
+    // BUG 2: Parser may accept statements without requiring semicolons
+    // Expected: Enforce semicolon as statement terminator
     StorageManager::dropTable(T + "B2");
     std::string output;
     {
@@ -74,6 +87,8 @@ void test_bug2_semicolon_enforcement() {
 
 void test_bug3_multiword_string() {
     std::cout << "test_bug3_multiword_string... ";
+    // BUG 3: String matching may fail for multi-word values
+    // Expected: WHERE clause correctly matches strings with spaces
     StorageManager::dropTable(T + "B3");
     runQuery("CREATE TABLE " + T + "B3 (id INT PRIMARY KEY, name STRING);");
     runQuery("INSERT INTO " + T + "B3 (id, name) VALUES (1, 'Alice two words');");
@@ -94,6 +109,8 @@ void test_bug3_multiword_string() {
 
 void test_bug3_math() {
     std::cout << "test_bug3_math... ";
+    // BUG 3 (Extended): Math expressions in WHERE clause may not be evaluated
+    // Expected: Expression like "id = 3-2" evaluates to "id = 1"
     StorageManager::dropTable(T + "B3Math");
     runQuery("CREATE TABLE " + T + "B3Math (id INT PRIMARY KEY);");
     runQuery("INSERT INTO " + T + "B3Math (id) VALUES (1);");
@@ -115,6 +132,8 @@ void test_bug3_math() {
 
 void test_bug4_unique_constraint() {
     std::cout << "test_bug4_unique_constraint... ";
+    // BUG 4: UNIQUE constraint on non-primary key columns may not be enforced
+    // Expected: Duplicate UNIQUE values should be rejected
     StorageManager::dropTable(T + "B4");
     runQuery("CREATE TABLE " + T + "B4 (id INT UNIQUE, name STRING PRIMARY KEY);");
     runQuery("INSERT INTO " + T + "B4 (id, name) VALUES (1, 'Alice');");
@@ -135,6 +154,8 @@ void test_bug4_unique_constraint() {
 
 void test_bug5_update_type_checking() {
     std::cout << "test_bug5_update_type_checking... ";
+    // BUG 5: UPDATE statements may not validate column types
+    // Expected: Assigning string to INT column should fail
     StorageManager::dropTable(T + "B5");
     runQuery("CREATE TABLE " + T + "B5 (id INT PRIMARY KEY);");
     runQuery("INSERT INTO " + T + "B5 (id) VALUES (1);");
@@ -155,6 +176,9 @@ void test_bug5_update_type_checking() {
 
 void test_bug6_referential_integrity() {
     std::cout << "test_bug6_referential_integrity... ";
+    // BUG 6: Foreign key constraints may not prevent parent row deletion
+    // when child rows still reference it
+    // Expected: DELETE on parent with active children should fail
     StorageManager::dropTable(T + "Child");
     StorageManager::dropTable(T + "Parent");
     runQuery("CREATE TABLE " + T + "Parent (id INT PRIMARY KEY);");
@@ -179,6 +203,8 @@ void test_bug6_referential_integrity() {
 
 void test_bug7_fk_position() {
     std::cout << "test_bug7_fk_position... ";
+    // BUG 7: Foreign key validation may only work when parent PK is in first column
+    // Expected: FK references should work regardless of PK column position
     StorageManager::dropTable(T + "ChildPos");
     StorageManager::dropTable(T + "ParentPos");
     // Parent PK in SECOND column

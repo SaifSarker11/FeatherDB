@@ -9,7 +9,10 @@ using namespace spl;
 // Unique table name prefix to avoid collisions with real db data
 static const std::string T = "Test_SM_";
 
-//createTable
+
+// CREATE TABLE Tests
+// These tests verify that StorageManager correctly creates tables and
+// handles duplicate table name collisions appropriately.
 
 void test_create_table_returns_true_for_new_table() {
     std::cout << "test_create_table_returns_true_for_new_table... ";
@@ -30,7 +33,10 @@ void test_create_table_returns_false_when_already_exists() {
     std::cout << "PASSED\n";
 }
 
-//loadTable / schema persistence
+
+// TABLE LOADING and SCHEMA PERSISTENCE Tests
+// These tests ensure that table metadata (schema, columns, constraints) is
+// correctly persisted and retrieved from storage across sessions.
 
 void test_load_table_returns_correct_column_names() {
     std::cout << "test_load_table_returns_correct_column_names... ";
@@ -78,7 +84,10 @@ void test_load_table_returns_empty_table_when_not_found() {
     std::cout << "PASSED\n";
 }
 
-//appendRow / loadTable rows
+
+// ROW INSERTION Tests
+// These tests verify that rows are correctly appended to tables and
+// that data persistence works across multiple insertions.
 
 void test_append_row_persists_data() {
     std::cout << "test_append_row_persists_data... ";
@@ -110,7 +119,10 @@ void test_append_multiple_rows_all_persist() {
     std::cout << "PASSED\n";
 }
 
-//saveTable
+
+// TABLE SAVE Tests
+// These tests ensure that modified table structures (with edited rows)
+// are correctly saved and persisted in storage.
 
 void test_save_table_overwrites_existing_rows() {
     std::cout << "test_save_table_overwrites_existing_rows... ";
@@ -133,7 +145,10 @@ void test_save_table_overwrites_existing_rows() {
     std::cout << "PASSED\n";
 }
 
-//dropTable
+
+// TABLE DELETION Tests
+// These tests verify that DROP TABLE operations correctly remove tables
+// from the system and clean up associated data.
 
 void test_drop_table_removes_table_from_list() {
     std::cout << "test_drop_table_removes_table_from_list... ";
@@ -146,7 +161,10 @@ void test_drop_table_removes_table_from_list() {
     std::cout << "PASSED\n";
 }
 
-//listTables
+
+// TABLE LISTING Tests
+// These tests ensure that StorageManager maintains an accurate index
+// of all tables and can list them correctly.
 
 void test_list_tables_includes_created_table() {
     std::cout << "test_list_tables_includes_created_table... ";
@@ -160,7 +178,10 @@ void test_list_tables_includes_created_table() {
     std::cout << "PASSED\n";
 }
 
-//RBAC: roles & permissions
+
+// RBAC: Role and Permission Tests
+// These tests verify role-based access control, including admin privileges,
+// role existence checking, and permission enforcement.
 
 void test_admin_role_always_has_permission() {
     std::cout << "test_admin_role_always_has_permission... ";
@@ -188,7 +209,10 @@ void test_nonexistent_role_does_not_exist() {
     std::cout << "PASSED\n";
 }
 
-//getTableSchema
+
+// TABLE SCHEMA RETRIEVAL Tests
+// These tests ensure that getTableSchema returns column information
+// without row data, useful for schema inspection.
 
 void test_get_table_schema_returns_columns_without_rows() {
     std::cout << "test_get_table_schema_returns_columns_without_rows... ";

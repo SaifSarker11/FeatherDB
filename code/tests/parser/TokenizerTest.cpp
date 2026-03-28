@@ -3,7 +3,11 @@
 #include <stdexcept>
 #include "../../src/parser/Tokenizer.h"
 
-//Tokenizer::nextToken
+// Tokenizer Basic Functionality Tests
+// These tests verify that the Tokenizer correctly identifies and classifies
+// different token types including keywords, identifiers, operators, numbers,
+// strings, and punctuation. Tests also cover whitespace handling and the
+// token stream traversal.
 
 void test_keywords_are_normalized_to_uppercase() {
     std::cout << "test_keywords_are_normalized_to_uppercase... ";
@@ -118,6 +122,7 @@ void test_unterminated_string_throws_exception() {
 
 void test_invalid_character_throws_exception() {
     std::cout << "test_invalid_character_throws_exception... ";
+    // Characters that are not valid SQL should throw an exception
     Tokenizer t("@");
     bool threw = false;
     try { t.nextToken(); } catch (const std::invalid_argument&) { threw = true; }
@@ -125,8 +130,14 @@ void test_invalid_character_throws_exception() {
     std::cout << "PASSED\n";
 }
 
+
+// Integration Tests
+// These tests verify that the tokenizer correctly handles complete SQL
+// statements with mixed token types.
+
 void test_full_select_statement_tokenizes_correctly() {
     std::cout << "test_full_select_statement_tokenizes_correctly... ";
+    // Test that a complete SELECT statement is tokenized with correct order
     Tokenizer t("SELECT id FROM Users WHERE id = 1");
     assert(t.nextToken() == "SELECT");
     assert(t.nextToken() == "id");
@@ -139,23 +150,38 @@ void test_full_select_statement_tokenizes_correctly() {
     std::cout << "PASSED\n";
 }
 
+
 int main() {
     try {
+        // Test keyword normalization and token type classification
         test_keywords_are_normalized_to_uppercase();
         test_keyword_type_is_reported_correctly();
         test_identifier_is_not_classified_as_keyword();
+        
+        // Test numeric and string literal handling
         test_integer_literal_is_classified_as_number();
         test_string_literal_strips_quotes();
+        
+        // Test operator and punctuation classification
         test_operator_is_classified_correctly();
         test_punctuation_comma_is_classified_correctly();
+        
+        // Test whitespace handling and token navigation
         test_whitespace_is_skipped_between_tokens();
         test_hasNext_returns_false_when_exhausted();
         test_hasNext_returns_true_when_tokens_remain();
         test_end_token_type_when_input_exhausted();
+        
+        // Test schema-related keywords
         test_pk_fk_keywords_are_recognized();
+        
+        // Test error handling
         test_unterminated_string_throws_exception();
         test_invalid_character_throws_exception();
+        
+        // Test integration with complete SQL statements
         test_full_select_statement_tokenizes_correctly();
+        
         std::cout << "\nALL TOKENIZER TESTS PASSED\n";
     } catch (const std::exception& e) {
         std::cerr << "FAILED: " << e.what() << "\n";

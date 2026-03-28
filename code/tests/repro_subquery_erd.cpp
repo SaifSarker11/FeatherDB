@@ -21,8 +21,15 @@ void runQuery(const std::string& query, QueryExecutor& exec, std::string& role) 
     }
 }
 
+
+// ERD (Entity-Relationship Diagram) Tests
+// These tests verify the ERD viewer correctly identifies relationships
+// between tables including one-to-one, one-to-many, and many-to-many relationships.
+
 void test_bug8_erd_relationships() {
     std::cout << "--- Testing Bug 8: ERD Relationships ---" << std::endl;
+    // BUG 8: ERD viewer may not correctly identify all relationship types
+    // particularly one-to-one (UNIQUE FK) and many-to-many (junction tables)
     std::string role = "admin";
     QueryExecutor exec;
     
@@ -50,6 +57,9 @@ void test_bug8_erd_relationships() {
 
 void test_bug9_scalar_subquery() {
     std::cout << "\n--- Testing Bug 9: Scalar Subqueries ---" << std::endl;
+    // BUG 9: Parser may not support scalar subqueries in WHERE clauses
+    // Expected: Support expressions like "WHERE col < (SELECT ...)"
+    // Also test IN operator for set membership checking
     std::string role = "admin";
     QueryExecutor exec;
 
@@ -80,8 +90,12 @@ void test_bug9_scalar_subquery() {
 }
 
 int main() {
+    // Initialize admin role with default secret
     StorageManager::saveRole("admin", "RamadanKareem");
+    
+    // Run ERD and subquery tests
     test_bug8_erd_relationships();
     test_bug9_scalar_subquery();
+    
     return 0;
 }

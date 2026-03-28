@@ -25,6 +25,7 @@ struct CaptureStdout {
 
 void test_insert_adds_row_to_table() {
     std::cout << "test_insert_adds_row_to_table... ";
+    // Set up a simple table and verify INSERT adds a new row
     StorageManager::dropTable(T + "Ins");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Ins", cols);
@@ -45,6 +46,7 @@ void test_insert_adds_row_to_table() {
 
 void test_insert_rejects_duplicate_primary_key() {
     std::cout << "test_insert_rejects_duplicate_primary_key... ";
+    // Verify that inserting duplicate primary key values is rejected
     StorageManager::dropTable(T + "PK");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "PK", cols);
@@ -71,6 +73,7 @@ void test_insert_rejects_duplicate_primary_key() {
 
 void test_insert_rejects_column_count_mismatch() {
     std::cout << "test_insert_rejects_column_count_mismatch... ";
+    // Ensure INSERT rejects when column count doesn't match value count
     StorageManager::dropTable(T + "Mismatch");
     std::vector<Column> cols = {{"id", "INT", true, ""}, {"name", "STRING", false, ""}};
     StorageManager::createTable(T + "Mismatch", cols);
@@ -91,6 +94,7 @@ void test_insert_rejects_column_count_mismatch() {
 
 void test_insert_rejects_invalid_int_value() {
     std::cout << "test_insert_rejects_invalid_int_value... ";
+    // Verify that non-integer values are rejected for INT columns
     StorageManager::dropTable(T + "IntVal");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "IntVal", cols);
@@ -110,6 +114,7 @@ void test_insert_rejects_invalid_int_value() {
 
 void test_insert_rejects_missing_column() {
     std::cout << "test_insert_rejects_missing_column... ";
+    // Check that INSERT fails when required columns are omitted
     StorageManager::dropTable(T + "Miss");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Miss", cols);
@@ -129,6 +134,7 @@ void test_insert_rejects_missing_column() {
 
 void test_insert_denied_without_permission() {
     std::cout << "test_insert_denied_without_permission... ";
+    // Verify that INSERT is denied when role lacks INSERT privilege
     StorageManager::dropTable(T + "Perm");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Perm", cols);
@@ -146,10 +152,14 @@ void test_insert_denied_without_permission() {
     std::cout << "PASSED\n";
 }
 
-//UPDATE
+
+// UPDATE Statement Tests
+// These tests ensure that QueryExecutor correctly processes UPDATE statements,
+// validating condition matching and data modification while preserving non-matching rows.
 
 void test_update_modifies_matching_rows() {
     std::cout << "test_update_modifies_matching_rows... ";
+    // Test that UPDATE modifies only rows matching the WHERE condition
     StorageManager::dropTable(T + "Upd");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Upd", cols);
@@ -169,6 +179,7 @@ void test_update_modifies_matching_rows() {
 
 void test_update_modifies_data() {
     std::cout << "test_update_modifies_data... ";
+    // Verify that UPDATE correctly stores the new value in the database
     StorageManager::dropTable(T + "Upd");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Upd", cols);
@@ -188,6 +199,7 @@ void test_update_modifies_data() {
 
 void test_update_does_not_modify_non_matching_rows() {
     std::cout << "test_update_does_not_modify_non_matching_rows... ";
+    // Ensure non-matching rows remain unchanged after UPDATE
     StorageManager::dropTable(T + "UpdNo");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "UpdNo", cols);
@@ -205,10 +217,14 @@ void test_update_does_not_modify_non_matching_rows() {
     std::cout << "PASSED\n";
 }
 
-//DELETE
+
+// DELETE Statement Tests
+// These tests verify that QueryExecutor correctly processes DELETE statements,
+// ensuring rows matching the WHERE condition are removed from the table.
 
 void test_delete_removes_matching_row() {
     std::cout << "test_delete_removes_matching_row... ";
+    // Test that DELETE removes rows matching the condition
     StorageManager::dropTable(T + "Del");
     std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Del", cols);
@@ -251,7 +267,10 @@ void test_delete_without_condition_removes_no_rows() {
     std::cout << "PASSED\n";
 }
 
-//CREATE TABLE via executor
+
+// CREATE TABLE Tests
+// These tests verify that QueryExecutor can execute CREATE TABLE statements
+// through the executor, properly delegating to StorageManager.
 
 void test_create_table_via_executor_creates_table() {
     std::cout << "test_create_table_via_executor_creates_table... ";

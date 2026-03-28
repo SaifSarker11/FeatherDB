@@ -75,6 +75,11 @@ SELECT * FROM trainer;
 UPDATE course SET course_name = 'Pizza Mozzarella' WHERE cid = 117;
 select * from course;
 
+DELETE FROM student WHERE sid = 99;
+DELETE FROM student WHERE grade < 50;
+DELETE FROM student_course WHERE student_id = 4;
+DELETE FROM trainer WHERE tid = 2;
+
 DROP TABLE Pokemon;
 DROP TABLE Trainer;
 DROP TABLE student;

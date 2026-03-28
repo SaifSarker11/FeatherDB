@@ -2084,3 +2084,47 @@ SELECT * FROM students -- This is a comment
 | **Integration** | No API/client library | Low | Direct CLI use |
 
 
+
+
+##  OPTIONAL PRIMARY KEYS IMPLEMENTATION
+
+### Optional Changes
+
+**Parser and AST**
+
+- `SQLParser::parseCreate` would need to remove the mandatory `hasKey` check.
+- The `CreateStatement` AST node must be updated to handle a null or empty PK field gracefully.
+
+**Schema Storage**
+
+- The `.schema` file format must support table definitions without a `PK` marker.
+- `StorageManager::loadTable` and `getTableSchema` must handle cases where `table.primaryKey` remains empty without throwing errors.
+
+**Query Execution**
+
+- **INSERT**: `handleInsert` currently uses the PK index to enforce row uniqueness. Without a PK, this check is skipped entirely, allowing duplicate rows to accumulate silently.
+- **UPDATE / DELETE**: Both operations often rely on the PK for precise row targeting. Without one, they fall back to WHERE clause matching, which can affect multiple identical rows unpredictably.
+- **Foreign Keys**: FK constraints must reference a PK in the parent table. If the parent has no PK, FK relationships cannot be established unless a candidate key is explicitly chosen.
+
+---
+
+### Implicit PK Inference Strategies
+
+If PKs become optional, the system needs a fallback strategy to maintain row identifiability. Three approaches are worth considering:
+
+| Strategy | Description | Key Risk |
+|---|---|---|
+| **First Column** | Automatically treat the first declared column as the PK | First column may not be unique (e.g., `FirstName`), causing integrity violations |
+| **Naming Convention** | Promote a column named `id` or `uuid` to PK automatically | Ambiguous if `id` is not intended as a PK, or if casing (`ID` vs `id`) causes mismatches |
+| **Hidden Row ID** | Generate an internal `_rowid` column appended to every row on insertion | Most robust, but requires the most architectural change; `.csv` files must store and manage the hidden field invisibly |
+
+---
+
+### Conclusion and Recommendation
+
+Making PKs optional is technically feasible — defaulting to a "No PK" state when none is declared avoids breaking existing behavior. However, it carries significant downstream consequences for relational integrity, FK resolution, and duplicate row handling.
+
+**Recommendation**: Do not make PKs optional without simultaneously implementing a Hidden Internal RowID. Every row in a relational system should be uniquely identifiable, and offloading that responsibility entirely to the user creates a fragile schema model.
+
+For the current FeatherDB architecture, keeping PKs mandatory remains the safest approach. If optionality becomes a priority, the Hidden RowID strategy is the only design that preserves integrity without placing an invisible burden on the user — specifically, a 64-bit integer `_rowid` generated and appended automatically on every insertion when no PK is defined.
+

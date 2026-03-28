@@ -130,6 +130,8 @@ int main()
                                       << std::left << std::setw(10) << t.columns[i].type;
                             if (t.columns[i].isPrimaryKey)
                                 std::cout << " PRIMARY KEY";
+                            if (t.columns[i].isUnique)
+                                std::cout << " UNIQUE";
                             if (!t.columns[i].fkTargetTable.empty())
                                 std::cout << " REFERENCES " << t.columns[i].fkTargetTable;
 

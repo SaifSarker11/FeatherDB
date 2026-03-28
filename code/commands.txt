@@ -1,19 +1,82 @@
 -- compile and run
-
 .\compile.bat
 .\build\featherdb.exe
 
 
--- enter secret code to login
+
+-- access admin via secretkey
+ramadankareem
 
 
--- crud
-create table users (id int primary key, name string);
+--table SETUP
+
+CREATE TABLE trainer (tid INT PRIMARY KEY,tname string);
+CREATE TABLE pokemon (pid INT PRIMARY KEY,pname string,atk int,def int, trainer_id INT unique references trainer);
+
+
+CREATE TABLE student (sid INT PRIMARY KEY,sname string,grade INT);
+
+CREATE TABLE course (cid INT PRIMARY KEY,course_name string);
+
+CREATE TABLE student_course (student_id INT references student,course_id INT references course);
+
+
+--  RBAC SETUP
+
+CREATE ROLE wasi with secret 'omar';
+CREATE ROLE saif with secret 'saif';
+
+GRANT SELECT, delete ON student TO wasi;
+GRANT SELECT, insert, insert ON pokemon, trainer TO intern;
 
 
 
----  relationships
--- many to many (jt)
-CREATE TABLE students (    student_id INT PRIMARY KEY,    student_name string);
-CREATE TABLE courses (    course_id INT PRIMARY KEY,    course_name string);
-CREATE TABLE student_course (sid int references students, cid int references courses);
+-- SECTION: INSERT DATA
+
+INSERT INTO trainer (tid, tname) VALUES (1, 'Ash Ketchum');
+INSERT INTO trainer (tid, tname) VALUES (2, 'Misty');
+
+INSERT INTO pokemon (pid, pname, atk, def, trainer_id) VALUES (1, 'Pikachu', 85, 71, 1);
+INSERT INTO pokemon (pid, pname, atk, def, trainer_id) VALUES (2, 'Bulbasaur', 60, 95, 1);
+INSERT INTO pokemon (pid, pname, atk, def, trainer_id) VALUES (3, 'Staryu', 70, 55, 2);
+
+INSERT INTO student (sid, sname, grade) VALUES (7, 'Johnny', 100);
+INSERT INTO student (sid, sname, grade) VALUES (2, 'Joseph', 95);
+INSERT INTO student (sid, sname, grade) VALUES (4, 'Higashikata', 88);
+insert into student (sid, sname, grade) values (99, 'Yuji Itadori', 17);
+
+INSERT INTO course (cid, course_name) VALUES (403, 'Steel Ball Run');
+INSERT INTO course (cid, course_name) VALUES (117, 'Risotto Nero');
+
+
+INSERT INTO student_course (student_id, course_id) VALUES (7, 403);
+INSERT INTO student_course (student_id, course_id) VALUES (7, 117);
+INSERT INTO student_course (student_id, course_id) VALUES (2, 403);
+INSERT INTO student_course (student_id, course_id) VALUES (4, 117);
+
+
+
+-- SECTION: QUERYING 
+
+SELECT * FROM StuDent;
+
+SELECT * FROM trainer WHERE tname = 'Ash Ketchum';
+SELECT * FROM student WHERE grade > 90;
+SELECT * FROM pokemon WHERE trainer_id = 1;
+SELECT * FROM student_course WHERE student_id = 7;
+
+Select * from student where grade < (select atk from pokemon where pname = 'Pikachu');
+
+
+
+-- SECTION 6: UPDATES, delete
+UPDATE trainer SET tname = 'Misty Kasumi' WHERE tname = 'Misty';
+SELECT * FROM trainer;
+UPDATE course SET course_name = 'Pizza Mozzarella' WHERE cid = 117;
+select * from course;
+
+DROP TABLE Pokemon;
+DROP TABLE Trainer;
+DROP TABLE student;
+DROP TABLE course;
+DROP TABLE student_course;

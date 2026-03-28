@@ -14,7 +14,7 @@ static const std::string T = "Test_SM_";
 void test_create_table_returns_true_for_new_table() {
     std::cout << "test_create_table_returns_true_for_new_table... ";
     StorageManager::dropTable(T + "New");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     assert(StorageManager::createTable(T + "New", cols) == true);
     StorageManager::dropTable(T + "New");
     std::cout << "PASSED\n";
@@ -23,7 +23,7 @@ void test_create_table_returns_true_for_new_table() {
 void test_create_table_returns_false_when_already_exists() {
     std::cout << "test_create_table_returns_false_when_already_exists... ";
     StorageManager::dropTable(T + "Dup");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Dup", cols);
     assert(StorageManager::createTable(T + "Dup", cols) == false);
     StorageManager::dropTable(T + "Dup");
@@ -35,7 +35,7 @@ void test_create_table_returns_false_when_already_exists() {
 void test_load_table_returns_correct_column_names() {
     std::cout << "test_load_table_returns_correct_column_names... ";
     StorageManager::dropTable(T + "Load");
-    std::vector<Column> cols = {{"id", "INT", true, ""}, {"name", "STRING", false, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Load", cols);
     Table t = StorageManager::loadTable(T + "Load");
     assert(t.columns.size() == 2);
@@ -48,7 +48,7 @@ void test_load_table_returns_correct_column_names() {
 void test_load_table_persists_primary_key_flag() {
     std::cout << "test_load_table_persists_primary_key_flag... ";
     StorageManager::dropTable(T + "PK");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "PK", cols);
     Table t = StorageManager::loadTable(T + "PK");
     assert(t.columns[0].isPrimaryKey == true);
@@ -61,8 +61,8 @@ void test_load_table_persists_foreign_key_target() {
     std::cout << "test_load_table_persists_foreign_key_target... ";
     StorageManager::dropTable(T + "FK");
     std::vector<Column> cols = {
-        {"id", "INT", true, ""},
-        {"userId", "INT", false, "Users"}
+        {"id", "INT", true, false, ""},
+        {"userId", "INT", false, false, "Users"}
     };
     StorageManager::createTable(T + "FK", cols);
     Table t = StorageManager::loadTable(T + "FK");
@@ -83,7 +83,7 @@ void test_load_table_returns_empty_table_when_not_found() {
 void test_append_row_persists_data() {
     std::cout << "test_append_row_persists_data... ";
     StorageManager::dropTable(T + "Rows");
-    std::vector<Column> cols = {{"id", "INT", true, ""}, {"name", "STRING", false, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Rows", cols);
     Row r; r.values = {"1", "Alice"};
     assert(StorageManager::appendRow(T + "Rows", r) == true);
@@ -98,7 +98,7 @@ void test_append_row_persists_data() {
 void test_append_multiple_rows_all_persist() {
     std::cout << "test_append_multiple_rows_all_persist... ";
     StorageManager::dropTable(T + "Multi");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Multi", cols);
     for (int i = 1; i <= 3; ++i) {
         Row r; r.values = {std::to_string(i)};
@@ -115,7 +115,7 @@ void test_append_multiple_rows_all_persist() {
 void test_save_table_overwrites_existing_rows() {
     std::cout << "test_save_table_overwrites_existing_rows... ";
     StorageManager::dropTable(T + "Save");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Save", cols);
     Row r1; r1.values = {"1"};
     StorageManager::appendRow(T + "Save", r1);
@@ -137,7 +137,7 @@ void test_save_table_overwrites_existing_rows() {
 
 void test_drop_table_removes_table_from_list() {
     std::cout << "test_drop_table_removes_table_from_list... ";
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Drop", cols);
     StorageManager::dropTable(T + "Drop");
     auto tables = StorageManager::listTables();
@@ -151,7 +151,7 @@ void test_drop_table_removes_table_from_list() {
 void test_list_tables_includes_created_table() {
     std::cout << "test_list_tables_includes_created_table... ";
     StorageManager::dropTable(T + "List");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "List", cols);
     auto tables = StorageManager::listTables();
     bool found = std::find(tables.begin(), tables.end(), T + "List") != tables.end();
@@ -193,7 +193,7 @@ void test_nonexistent_role_does_not_exist() {
 void test_get_table_schema_returns_columns_without_rows() {
     std::cout << "test_get_table_schema_returns_columns_without_rows... ";
     StorageManager::dropTable(T + "Schema");
-    std::vector<Column> cols = {{"id", "INT", true, ""}, {"val", "STRING", false, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"val", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Schema", cols);
     Row r; r.values = {"1", "test"};
     StorageManager::appendRow(T + "Schema", r);

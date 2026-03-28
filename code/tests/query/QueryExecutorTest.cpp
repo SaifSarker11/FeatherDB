@@ -26,7 +26,7 @@ struct CaptureStdout {
 void test_insert_adds_row_to_table() {
     std::cout << "test_insert_adds_row_to_table... ";
     StorageManager::dropTable(T + "Ins");
-    std::vector<Column> cols = {{"id", "INT", true, ""}, {"name", "STRING", false, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Ins", cols);
 
     QueryExecutor exec;
@@ -46,7 +46,7 @@ void test_insert_adds_row_to_table() {
 void test_insert_rejects_duplicate_primary_key() {
     std::cout << "test_insert_rejects_duplicate_primary_key... ";
     StorageManager::dropTable(T + "PK");
-    std::vector<Column> cols = {{"id", "INT", true, ""}, {"name", "STRING", false, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "PK", cols);
 
     QueryExecutor exec;
@@ -92,7 +92,7 @@ void test_insert_rejects_column_count_mismatch() {
 void test_insert_rejects_invalid_int_value() {
     std::cout << "test_insert_rejects_invalid_int_value... ";
     StorageManager::dropTable(T + "IntVal");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "IntVal", cols);
 
     QueryExecutor exec;
@@ -108,10 +108,29 @@ void test_insert_rejects_invalid_int_value() {
     std::cout << "PASSED\n";
 }
 
+void test_insert_rejects_missing_column() {
+    std::cout << "test_insert_rejects_missing_column... ";
+    StorageManager::dropTable(T + "Miss");
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
+    StorageManager::createTable(T + "Miss", cols);
+
+    QueryExecutor exec;
+    std::string role = "admin";
+    auto stmt = std::make_unique<InsertStatement>(T + "Miss",
+        std::vector<std::string>{"id"},
+        std::vector<std::string>{"1"});
+    
+    CaptureStdout cap;
+    exec.execute(std::move(stmt), role);
+    assert(cap.str().find("Error") != std::string::npos);
+    StorageManager::dropTable(T + "Miss");
+    std::cout << "PASSED\n";
+}
+
 void test_insert_denied_without_permission() {
     std::cout << "test_insert_denied_without_permission... ";
     StorageManager::dropTable(T + "Perm");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Perm", cols);
 
     QueryExecutor exec;
@@ -132,7 +151,7 @@ void test_insert_denied_without_permission() {
 void test_update_modifies_matching_rows() {
     std::cout << "test_update_modifies_matching_rows... ";
     StorageManager::dropTable(T + "Upd");
-    std::vector<Column> cols = {{"id", "INT", true, ""}, {"name", "STRING", false, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "Upd", cols);
     Row r; r.values = {"1", "Alice"};
     StorageManager::appendRow(T + "Upd", r);
@@ -148,10 +167,29 @@ void test_update_modifies_matching_rows() {
     std::cout << "PASSED\n";
 }
 
+void test_update_modifies_data() {
+    std::cout << "test_update_modifies_data... ";
+    StorageManager::dropTable(T + "Upd");
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
+    StorageManager::createTable(T + "Upd", cols);
+    Row r; r.values = {"1", "'Alice'"};
+    StorageManager::appendRow(T + "Upd", r);
+
+    QueryExecutor exec;
+    std::string role = "admin";
+    auto stmt = std::make_unique<UpdateStatement>(T + "Upd", "name", "'Bob'", "id = 1");
+    exec.execute(std::move(stmt), role);
+
+    Table t = StorageManager::loadTable(T + "Upd");
+    assert(t.rows[0].values[1] == "'Bob'");
+    StorageManager::dropTable(T + "Upd");
+    std::cout << "PASSED\n";
+}
+
 void test_update_does_not_modify_non_matching_rows() {
     std::cout << "test_update_does_not_modify_non_matching_rows... ";
     StorageManager::dropTable(T + "UpdNo");
-    std::vector<Column> cols = {{"id", "INT", true, ""}, {"name", "STRING", false, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}, {"name", "STRING", false, false, ""}};
     StorageManager::createTable(T + "UpdNo", cols);
     Row r; r.values = {"1", "Alice"};
     StorageManager::appendRow(T + "UpdNo", r);
@@ -172,7 +210,7 @@ void test_update_does_not_modify_non_matching_rows() {
 void test_delete_removes_matching_row() {
     std::cout << "test_delete_removes_matching_row... ";
     StorageManager::dropTable(T + "Del");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Del", cols);
     Row r1; r1.values = {"1"};
     Row r2; r2.values = {"2"};
@@ -194,7 +232,7 @@ void test_delete_removes_matching_row() {
 void test_delete_without_condition_removes_no_rows() {
     std::cout << "test_delete_without_condition_removes_no_rows... ";
     StorageManager::dropTable(T + "DelAll");
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "DelAll", cols);
     Row r; r.values = {"1"};
     StorageManager::appendRow(T + "DelAll", r);
@@ -234,7 +272,7 @@ void test_create_table_via_executor_creates_table() {
 
 void test_drop_table_via_executor_removes_table() {
     std::cout << "test_drop_table_via_executor_removes_table... ";
-    std::vector<Column> cols = {{"id", "INT", true, ""}};
+    std::vector<Column> cols = {{"id", "INT", true, false, ""}};
     StorageManager::createTable(T + "Drp", cols);
 
     QueryExecutor exec;

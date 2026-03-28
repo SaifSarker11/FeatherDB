@@ -28,10 +28,27 @@ public:
 
         for (const auto& name : tableNames) {
             Table t = StorageManager::getTableSchema(name);
+            
+            // Check if it's a junction table (N:N): all columns are FKs
+            bool isJunction = true;
+            for (const auto& col : t.columns) {
+                if (col.fkTargetTable.empty()) {
+                    isJunction = false;
+                    break;
+                }
+            }
+            if (t.columns.empty()) isJunction = false;
+
             bool hasRel = false;
             for (const auto& col : t.columns) {
                 if (!col.fkTargetTable.empty()) {
-                    std::string relType = col.isPrimaryKey ? "1:1" : "1:N";
+                    std::string relType;
+                    if (isJunction) {
+                        relType = "N:N";
+                    } else {
+                        relType = (col.isPrimaryKey || col.isUnique) ? "1:1" : "1:N";
+                    }
+
                     std::cout << std::left << std::setw(25) << t.name 
                               << std::left << std::setw(15) << relType 
                               << std::left << std::setw(25) << col.fkTargetTable 

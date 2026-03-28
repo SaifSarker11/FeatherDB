@@ -44,22 +44,33 @@ std::unique_ptr<AST> SQLParser::parse()
 	{
 		throw std::runtime_error("Expected SQL keyword");
 	}
+    
+    std::unique_ptr<AST> ast;
 	if (currentToken == "SELECT")
-		return parseSelect();
-	if (currentToken == "INSERT")
-		return parseInsert();
-	if (currentToken == "UPDATE")
-		return parseUpdate();
-	if (currentToken == "DELETE")
-		return parseDelete();
+		ast = parseSelect();
+	else if (currentToken == "INSERT")
+		ast = parseInsert();
+	else if (currentToken == "UPDATE")
+		ast = parseUpdate();
+	else if (currentToken == "DELETE")
+		ast = parseDelete();
 	else if (currentToken == "CREATE") {
-		return parseCreate();
+		ast = parseCreate();
 	} else if (currentToken == "GRANT") {
-		return parseGrant();
+		ast = parseGrant();
 	} else if (currentToken == "DROP") {
-		return parseDrop();
-	}
-	throw std::runtime_error("Unknown SQL command");
+		ast = parseDrop();
+	} else {
+        throw std::runtime_error("Unknown SQL command");
+    }
+
+    // Bug 1 & 2: Enforce semicolon and reject trailing garbage
+    expect(";");
+    if (currentType != Tokenizer::TokenType::END) {
+        throw std::runtime_error("Unexpected token after semicolon: '" + currentToken + "'");
+    }
+
+    return ast;
 }
 
 std::unique_ptr<AST> SQLParser::parseCreate()
@@ -86,18 +97,25 @@ std::unique_ptr<AST> SQLParser::parseCreate()
         }
 		advance(); 
 
-        // Check for PK/FK
-        if (currentToken == "PRIMARY" || currentToken == "primary") {
-            advance();
-            expect("KEY");
-            type += " PK";
-            hasKey = true;
-        } else if (currentToken == "REFERENCES" || currentToken == "references") {
-            advance();
-            std::string targetTable = currentToken;
-            expect(Tokenizer::TokenType::IDENTIFIER);
-            type += " FK " + targetTable;
-            hasKey = true;
+        // Check for multiple PK/FK/UNIQUE constraints per column
+        while (true) {
+            if (currentToken == "PRIMARY" || currentToken == "primary") {
+                advance();
+                expect("KEY");
+                type += " PK";
+                hasKey = true;
+            } else if (currentToken == "REFERENCES" || currentToken == "references") {
+                advance();
+                std::string targetTable = currentToken;
+                expect(Tokenizer::TokenType::IDENTIFIER);
+                type += " FK " + targetTable;
+                hasKey = true;
+            } else if (currentToken == "UNIQUE" || currentToken == "unique") {
+                advance();
+                type += " UNIQUE";
+            } else {
+                break;
+            }
         }
 
 		columns.push_back({name, type});
@@ -142,13 +160,13 @@ std::unique_ptr<AST> SQLParser::parseSelect()
 	{
 		advance();
         int parenDepth = 0;
-		while (currentType != Tokenizer::TokenType::END && 
+		while (currentType != Tokenizer::TokenType::END && currentToken != ";" &&
                (parenDepth > 0 || (currentToken != ")" && currentToken != "ORDER")))
 		{
             if (currentToken == "(") parenDepth++;
             else if (currentToken == ")") parenDepth--;
             
-			condition += currentToken + " ";
+			condition += (currentType == Tokenizer::TokenType::STRING ? "'" + currentToken + "'" : currentToken) + " ";
 			advance();
 		}
 	}
@@ -205,7 +223,7 @@ std::unique_ptr<AST> SQLParser::parseUpdate()
         // Capture everything until end or next keyword (UPDATE usually ends with WHERE, but check delimiters)
 		while (currentType != Tokenizer::TokenType::END && currentToken != ";")
 		{
-			condition += currentToken + " ";
+			condition += (currentType == Tokenizer::TokenType::STRING ? "'" + currentToken + "'" : currentToken) + " ";
 			advance();
 		}
 	}
@@ -225,7 +243,7 @@ std::unique_ptr<AST> SQLParser::parseDelete()
         // Capture everything until end
 		while (currentType != Tokenizer::TokenType::END && currentToken != ";")
 		{
-			condition += currentToken + " ";
+			condition += (currentType == Tokenizer::TokenType::STRING ? "'" + currentToken + "'" : currentToken) + " ";
 			advance();
 		}
 	}

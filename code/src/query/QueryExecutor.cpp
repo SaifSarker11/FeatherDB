@@ -29,27 +29,77 @@ int getColumnIndex(const Table& table, const std::string& colName) {
     return -1;
 }
 
-bool evaluateSimple(const Row& row, const Table& table, const std::string& condition) {
-    std::stringstream ss(condition);
-    std::string colName, op, val;
-    ss >> colName >> op >> val; 
-    
-    if (colName.empty() || op.empty() || val.empty()) return true; // Malformed/Empty condition? Treat as true? Or false.
+bool hasDependentRows(const std::string& parentTable, const std::string& parentPkValue) {
+    std::vector<std::string> allTables = StorageManager::listTables();
+    for (const auto& tableName : allTables) {
+        if (tableName == parentTable) continue;
+        Table t = StorageManager::loadTable(tableName);
+        for (size_t i = 0; i < t.columns.size(); ++i) {
+            if (t.columns[i].fkTargetTable == parentTable) {
+                for (const auto& row : t.rows) {
+                    if (i < row.values.size() && row.values[i] == parentPkValue) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
 
+int evaluateExpression(const std::string& expr) {
+    if (expr.empty()) return 0;
+    std::stringstream ss(expr);
+    int result = 0;
+    if (!(ss >> result)) return 0;
+    char op;
+    int nextVal;
+    while (ss >> op >> nextVal) {
+        if (op == '+') result += nextVal;
+        else if (op == '-') result -= nextVal;
+        else if (op == '*') result *= nextVal;
+        else if (op == '/') if (nextVal != 0) result /= nextVal;
+    }
+    return result;
+}
+
+bool evaluateSimple(const Row& row, const Table& table, const std::string& condition) {
+    if (condition.empty()) return true;
+    
+    std::string op;
+    size_t opPos = std::string::npos;
+    static const std::vector<std::string> ops = {">=", "<=", "!=", "=", ">", "<"};
+    for (const auto& o : ops) {
+        opPos = condition.find(o);
+        if (opPos != std::string::npos) {
+            op = o;
+            break;
+        }
+    }
+    
+    if (opPos == std::string::npos) return true;
+
+    std::string colName = condition.substr(0, opPos);
+    std::string valExpr = condition.substr(opPos + op.length());
+    
+    auto trim = [](std::string& s) {
+        size_t first = s.find_first_not_of(" ");
+        if (std::string::npos == first) { s = ""; return; }
+        size_t last = s.find_last_not_of(" ");
+        s = s.substr(first, (last - first + 1));
+    };
+    trim(colName);
+    trim(valExpr);
+    
     int idx = getColumnIndex(table, colName);
-    if (idx == -1) return false; 
+    if (idx == -1) return false;
 
     std::string rowVal = row.values[idx];
-
-    // Remove quotes
-    if (val.size() >= 2 && val.front() == '\'' && val.back() == '\'') {
-        val = val.substr(1, val.size() - 2);
-    }
     
     if (table.columns[idx].type == "INT" || table.columns[idx].type == "int") {
         try {
             int r = std::stoi(rowVal);
-            int v = std::stoi(val);
+            int v = evaluateExpression(valExpr);
             if (op == "=") return r == v;
             if (op == ">") return r > v;
             if (op == "<") return r < v;
@@ -58,10 +108,13 @@ bool evaluateSimple(const Row& row, const Table& table, const std::string& condi
             if (op == "!=") return r != v;
         } catch (...) { return false; }
     } else {
-        if (op == "=") return rowVal == val;
-        if (op == "!=") return rowVal != val;
-        if (op == ">") return rowVal > val;
-        if (op == "<") return rowVal < val;
+        if (valExpr.size() >= 2 && valExpr.front() == '\'' && valExpr.back() == '\'') {
+            valExpr = valExpr.substr(1, valExpr.size() - 2);
+        }
+        if (op == "=") return rowVal == valExpr;
+        if (op == "!=") return rowVal != valExpr;
+        if (op == ">") return rowVal > valExpr;
+        if (op == "<") return rowVal < valExpr;
     }
     return false;
 }
@@ -108,6 +161,12 @@ void QueryExecutor::handleCreate(CreateStatement* stmt) {
         if (fkPos != std::string::npos) {
             col.fkTargetTable = col.type.substr(fkPos + 4);
             col.type = col.type.substr(0, fkPos);
+        }
+
+        size_t uniquePos = col.type.find(" UNIQUE");
+        if (uniquePos != std::string::npos) {
+            col.isUnique = true;
+            col.type = col.type.substr(0, uniquePos);
         }
         
         cols.push_back(col);
@@ -159,9 +218,19 @@ void QueryExecutor::handleInsert(InsertStatement* stmt, const std::string& curre
         if (!table.columns[i].fkTargetTable.empty()) {
             Table targetTable = StorageManager::loadTable(table.columns[i].fkTargetTable);
             bool found = false;
-            // Assuming target column is 'id' or first column
+            
+            // Bug 7: Correctly identify the primary key column index of the target table
+            int targetPkIdx = -1;
+            for (size_t j = 0; j < targetTable.columns.size(); ++j) {
+                if (targetTable.columns[j].isPrimaryKey) {
+                    targetPkIdx = j;
+                    break;
+                }
+            }
+            if (targetPkIdx == -1) targetPkIdx = 0; // Fallback to first column
+
             for (const auto& r : targetTable.rows) {
-                if (!r.values.empty() && r.values[0] == val) {
+                if (targetPkIdx < (int)r.values.size() && r.values[targetPkIdx] == val) {
                     found = true;
                     break;
                 }
@@ -173,13 +242,16 @@ void QueryExecutor::handleInsert(InsertStatement* stmt, const std::string& curre
         }
     }
 
-    // Check PK Uniqueness
-    if (pkIdx != -1) {
-        std::string newPkVal = stmt->values[pkIdx];
-        for (const auto& existingRow : table.rows) {
-            if (pkIdx < existingRow.values.size() && existingRow.values[pkIdx] == newPkVal) {
-                std::cout << "Error: Primary key violation. Value '" << newPkVal << "' already exists in column '" << table.columns[pkIdx].name << "'.\n";
-                return;
+    // Check Uniqueness (PK and UNIQUE)
+    for (size_t i = 0; i < table.columns.size(); ++i) {
+        if (table.columns[i].isPrimaryKey || table.columns[i].isUnique) {
+            std::string newVal = stmt->values[i];
+            for (const auto& existingRow : table.rows) {
+                if (i < existingRow.values.size() && existingRow.values[i] == newVal) {
+                    std::string constraintType = table.columns[i].isPrimaryKey ? "Primary key" : "Unique constraint";
+                    std::cout << "Error: " << constraintType << " violation. Value '" << newVal << "' already exists in column '" << table.columns[i].name << "'.\n";
+                    return;
+                }
             }
         }
     }
@@ -269,30 +341,94 @@ Table QueryExecutor::executeSelect(SelectStatement* stmt, const std::string& cur
         std::string inCol;
         bool hasIn = false;
         
-        size_t inPos = condition.find(" IN (SELECT");
+        auto trim = [](std::string& s) {
+            size_t first = s.find_first_not_of(" ");
+            if (std::string::npos == first) { s = ""; return; }
+            size_t last = s.find_last_not_of(" ");
+            s = s.substr(first, (last - first + 1));
+        };
+
+        size_t inPos = condition.find(" IN ");
+        if (inPos == std::string::npos) inPos = condition.find(" in ");
+        
         if (inPos != std::string::npos) {
-             hasIn = true;
-             size_t spacePos = condition.rfind(" ", inPos - 1);
-             if (spacePos != std::string::npos) {
-                 inCol = condition.substr(spacePos + 1, inPos - spacePos - 1);
-             } else {
-                 inCol = condition.substr(0, inPos);
-             }
+             inCol = condition.substr(0, inPos);
+             trim(inCol);
              
              size_t startParen = condition.find("(", inPos);
-             size_t endParen = condition.rfind(")");
-             std::string subSQL = condition.substr(startParen + 1, endParen - startParen - 1);
-             
-             Tokenizer tokenizer(subSQL);
-             SQLParser parser(tokenizer);
-             std::unique_ptr<AST> subAst = parser.parse();
-             QueryExecutor subExec;
-             if (subAst && subAst->type == "SELECT") {
-                  Table subRes = subExec.executeSelect(static_cast<SelectStatement*>(subAst.get()), currentRole);
-                  for(const auto& r : subRes.rows) {
-                      if(!r.values.empty()) inValues.insert(r.values[0]);
-                  }
+             if (startParen != std::string::npos) {
+                 size_t endParen = std::string::npos;
+                 int depth = 0;
+                 for (size_t i = startParen; i < condition.length(); ++i) {
+                     if (condition[i] == '(') depth++;
+                     else if (condition[i] == ')') {
+                         depth--;
+                         if (depth == 0) {
+                             endParen = i;
+                             break;
+                         }
+                     }
+                 }
+                 
+                 if (endParen != std::string::npos) {
+                    std::string subSQL = condition.substr(startParen + 1, endParen - startParen - 1);
+                    trim(subSQL);
+                    if (subSQL.rfind("SELECT", 0) == 0 || subSQL.rfind("select", 0) == 0) {
+                        hasIn = true;
+                        subSQL += ";";
+                        Tokenizer tokenizer(subSQL);
+                        SQLParser parser(tokenizer);
+                        std::unique_ptr<AST> subAst = parser.parse();
+                        QueryExecutor subExec;
+                        if (subAst && subAst->type == "SELECT") {
+                             Table subRes = subExec.executeSelect(static_cast<SelectStatement*>(subAst.get()), currentRole);
+                             for(const auto& r : subRes.rows) {
+                                 if(!r.values.empty()) inValues.insert(r.values[0]);
+                             }
+                        }
+                    }
+                 }
              }
+        }
+
+        // New logic for scalar subqueries: WHERE grade < (SELECT ...)
+        size_t subPos = condition.find("( SELECT");
+        if (subPos == std::string::npos) subPos = condition.find("( select");
+        if (subPos == std::string::npos) subPos = condition.find("(SELECT");
+        if (subPos == std::string::npos) subPos = condition.find("(select");
+        
+        if (subPos != std::string::npos && !hasIn) {
+            size_t startParen = subPos;
+            size_t endParen = std::string::npos;
+            int depth = 0;
+            for (size_t i = startParen; i < condition.length(); ++i) {
+                if (condition[i] == '(') depth++;
+                else if (condition[i] == ')') {
+                    depth--;
+                    if (depth == 0) {
+                        endParen = i;
+                        break;
+                    }
+                }
+            }
+
+            if (endParen != std::string::npos && endParen > startParen) {
+                std::string subSQL = condition.substr(startParen + 1, endParen - startParen - 1) + ";";
+                Tokenizer tokenizer(subSQL);
+                SQLParser parser(tokenizer);
+                std::unique_ptr<AST> subAst = parser.parse();
+                QueryExecutor subExec;
+                if (subAst && subAst->type == "SELECT") {
+                    Table subRes = subExec.executeSelect(static_cast<SelectStatement*>(subAst.get()), currentRole);
+                    if (subRes.rows.size() != 1 || subRes.columns.size() != 1) {
+                        std::cout << "Error: Subquery must return exactly one scalar value.\n";
+                        return Table();
+                    }
+                    std::string scalarVal = subRes.rows[0].values[0];
+                    // Replace the subquery in the condition with the actual value
+                    condition.replace(startParen, endParen - startParen + 1, scalarVal);
+                }
+            }
         }
         
         for (const auto& row : sourceTable.rows) {
@@ -369,6 +505,31 @@ void QueryExecutor::handleUpdate(UpdateStatement* stmt, const std::string& curre
     int count = 0;
     for (auto& row : table.rows) {
         if (stmt->condition.empty() || evaluateSimple(row, table, stmt->condition)) {
+            // Bug 6: Referential Integrity (RESTRICT) for UPDATE
+            // If the PK is being updated and it's referenced elsewhere, block it.
+            int pkIdx = -1;
+            for(int i=0; i<(int)table.columns.size(); ++i) {
+                if(table.columns[i].isPrimaryKey) {
+                    pkIdx = i;
+                    break;
+                }
+            }
+            
+            if (pkIdx != -1 && pkIdx == setIdx && row.values[pkIdx] != stmt->value) {
+                if (hasDependentRows(table.name, row.values[pkIdx])) {
+                    std::cout << "Error: Referential integrity violation. Cannot update row in table '" << table.name << "' as it is referenced by other tables (RESTRICT).\n";
+                    return;
+                }
+            }
+
+            // Bug 5: Type checking on UPDATE
+            std::string type = table.columns[setIdx].type;
+            if (type == "INT" || type == "int") {
+                if (!isInteger(stmt->value)) {
+                    std::cout << "Error: Invalid INT value '" << stmt->value << "' for column '" << table.columns[setIdx].name << "'\n";
+                    return;
+                }
+            }
             row.values[setIdx] = stmt->value;
             count++;
         }
@@ -399,6 +560,17 @@ void QueryExecutor::handleDelete(DeleteStatement* stmt, const std::string& curre
     int count = 0;
     for (const auto& row : table.rows) {
         if (!stmt->condition.empty() && evaluateSimple(row, table, stmt->condition)) {
+            // Bug 6: Referential Integrity (RESTRICT)
+            // If this row is being referenced by ANY other table, block the deletion
+            int pkIdx = -1;
+            for(int i=0; i<table.columns.size(); ++i) if(table.columns[i].isPrimaryKey) pkIdx = i;
+
+            if (pkIdx != -1) {
+                if (hasDependentRows(table.name, row.values[pkIdx])) {
+                    std::cout << "Error: Referential integrity violation. Cannot delete row in table '" << table.name << "' as it is referenced by other tables (RESTRICT).\n";
+                    return; // Stop the delete operation
+                }
+            }
             count++; // Skip (delete)
         } else {
             newTable.rows.push_back(row);

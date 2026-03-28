@@ -1,93 +1,119 @@
 # FeatherDB 
 
-FeatherDB is a custom SQL Database Engine written in C++ from scratch. It supports CRUD operations, nested queries, and a REPL interface.
+![Language](https://img.shields.io/badge/language-C%2B%2B-orange)
 
+**FeatherDB** is a lightweight, file-based relational database engine written from scratch in C++. It demonstrates advanced database concepts through a custom SQL interpreter, role-based access control, and dynamic relational visualization.
 
-## QuickStart: How to Build
+---
 
-Run the provided `compile.bat` script:
+## 🚀 Key Features
+
+- **Core SQL Engine**: Supports `CREATE`, `INSERT`, `SELECT`, `UPDATE`, `DELETE`, and `DROP` statements.
+- **Relational Integrity**: Enforces `PRIMARY KEY`, `UNIQUE`, and `REFERENCES` (Foreign Key) constraints with `RESTRICT` delete policy.
+- **Advanced Querying**: Recursive support for nested subqueries in `FROM` and `WHERE` clauses, plus in-memory `ORDER BY` sorting via Quicksort.
+- **Stealthy RBAC**: A multi-phase security layer with secret-key authentication and granular role permissions (stored in `db/_roles.csv`).
+- **Dynamic Visualization**: Integrated `.erd` utility to visualize 1:1, 1:N, and N:N relationships directly in the REPL.
+
+---
+
+## 🛠️ Quick Start
+
+### Prerequisites
+- Windows OS
+- G++ Compiler (supporting C++17 or later)
+
+### Build and Run
+1.  **Compile**: Run the provided script to generate the binary.
+    ```powershell
+    .\compile.bat
+    ```
+2.  **Launch**: Execute the database engine.
+    ```powershell
+    .\build\featherdb.exe
+    ```
+
+### First Commands to Try
+Upon launch, FeatherDB starts in a restricted "stealth" mode. Authenticate as Admin to begin:
+```sql
+-- 1. Login (Default Secret)
+ramadankareem
+
+-- 2. Create a Table with Constraints
+CREATE TABLE users (id INT PRIMARY KEY, name STRING UNIQUE);
+
+-- 3. Insert and Query
+INSERT INTO users (id, name) VALUES (1, 'Safwan');
+SELECT * FROM users;
 ```
-.\compile.bat
-```
-This will compile the source code and generate the executable in `build/featherdb.exe`.
+Setup .env file for custom secrets and configurations as needed.
 
-## How to Run
+---
 
-Execute the generated binary:
-```
-.\build\featherdb.exe
-```
+##  Role-Based Access Control (RBAC)
 
-## Features & Usage
+FeatherDB implements a secure session-based RBAC system:
+1.  **Authentication**: Enter a role's secret key (or the admin secret phrase) in the REPL to toggle login/logout.
+2.  **Role Management**: Admins can create roles and grant specific privileges.
+    ```sql
+    CREATE ROLE dev WITH SECRET 'safwan_pass';
+    GRANT SELECT, INSERT ON users TO dev;
+    ```
+3.  **Active Sessions**: The prompt reflects your current role: `featherDb> (dev)`.
 
-The interactive REPL supports standard SQL commands and meta-commands.
+---
+
+##  SQL & Meta-Command Reference
+
+### SQL Examples
+- **Nested Select**: `SELECT * FROM (SELECT id FROM users);`
+- **Subquery Filter**: `SELECT * FROM products WHERE price < (SELECT max_price FROM config);`
+- **Update with Constraints**: `UPDATE users SET name = 'Saif' WHERE id = 1;`
 
 ### Meta-Commands
-- `.help`: Show help message.
-- `.tables`: List all tables.
-- `.schema <table_name>`: Show schema of a table.
-- `.exit`: Exit the database.
+| Command | Syntax | Description |
+| :--- | :--- | :--- |
+| **Help** | `.help` | Display the list of available meta-commands. |
+| **Tables** | `.tables` | List all tables currently stored in the `db/` folder. |
+| **Schema** | `.schema <name>` | Display the `CREATE TABLE` statement for a specific table. |
+| **ERD** | `.erd` | Visualize current entity relationships (1:1, 1:N, N:N). |
+| **Exit** | `.exit` | Safely close the database session. |
 
-### SQL Features
-- **CREATE TABLE**: Define new tables.
-  ```sql
-  CREATE TABLE users (id INT PRIMARY KEY, name STRING);
-  ```
-- **INSERT**: Add rows.
-  ```sql
-  INSERT INTO users (id, name) VALUES (1, alice);
-  ```
-- **SELECT**: Query data with filtering and sorting.
-  ```sql
-  SELECT * FROM users WHERE id > 0 ORDER BY id;
-  ```
-- **UPDATE**: Modify existing rows.
-  ```sql
-  UPDATE users SET name = bob WHERE id = 1;
-  ```
-- **DELETE**: Remove rows.
-  ```sql
-  DELETE FROM users WHERE id = 1;
-  ```
-- **Nested Queries**: Support for subqueries in `FROM` clause and `WHERE ... IN` clause.
-  ```sql
-  SELECT * FROM (SELECT id, name FROM users WHERE id > 5);
-  SELECT * FROM users WHERE id IN (SELECT id FROM banned_users);
-  ```
+---
 
-## Architecture & Implementation Details
+##  Project Structure
 
-- **Parser**: A custom recursive descent parser (modified from existing base) that transforms SQL into an AST. Added support for `CREATE`, `ORDER BY`, and nested structures.
-- **Execution Engine**: `QueryExecutor` traverses the AST.
-    - **Filtering**: Implemented a custom expression evaluator for `WHERE` clauses without external libraries.
-    - **Sorting**: Implemented a manual **Quicksort** algorithm for `ORDER BY`.
-    - **Nested Queries**: Handled via recursive execution of `SelectStatement` and materialization of intermediate results.
-- **Storage Layer**: `StorageManager` updates `db/table.csv` and `db/table.schema`.
+```text
+spl1/
+├── build/             # Compiled binaries
+├── code/
+│   ├── src/           # Source code (.cpp, .h)
+│   │   ├── parser/    # Tokenizer, SQLParser, AST
+│   │   ├── query/     # Execution Engine & Expression Evaluator
+│   │   ├── storage/   # Disk Persistence & CSV Handling
+│   │   └── utils/     # ERD, Printing, and Config
+│   └── commands.txt   # Demo script and test cases
+└── README.md          # Project overview
+```
 
-## Supported Data Types
+---
 
-FeatherDB is a schemaless-like engine but supports basic validation for:
-- **`INT`**: Integer numbers.
-- **`STRING`**: Text values (no quotes needed for simple single-word values, use quotes `'...'` for values with spaces).
-- **`VARCHAR`**: Treated same as `STRING`.
+##  Architecture Summary
 
-## Recent Changes & Changelog
+FeatherDB follows a decoupled pipeline architecture:
+`REPL` → `Tokenizer` → `SQLParser` → `AST` → `QueryExecutor` → `StorageManager` → `CSV/Schema Files`.
 
-### v1.1.0 (Current)
-- **Fix**: Resolved issue where `UPDATE` and `DELETE` ignored `WHERE` conditions (now correctly parses full expressions).
-- **Feat**: Data persistence moved to `db/` folder to separate data from executables.
-- **Feat**: Tokenizer is now case-insensitive (e.g., `sElEcT` works).
-- **Doc**: Added `QUICKSTART.md` with usage instructions.
+All data operations are verified against a centralized RBAC security layer before reaching the storage engine, ensuring that integrity and security are never bypassed. For deep technical details, see [documentation.md](code/documentation.md).
 
-### v1.0.0
-- Initial release with CRUD, Nested Queries, and REPL.
-## Contributing
-Team
-- [safwansatil](github.com/safwansatil)
-- [saif al sarker](https://github.com/SaifSarker11)
-- [wasiomar](https://github.com/WasiOmar)
+---
 
-## Acknowledgements
+##  Team
+
+- **Md. Saif Al Sarker** - [@SaifSarker11](https://github.com/SaifSarker11)
+- **M Safwan Hasan Khan** - [@safwansatil](https://github.com/safwansatil)
+- **Wasi Omar Syed** - [@WasiOmar](https://github.com/WasiOmar)
+
+---
+
+##  Acknowledgements
+
 "I've got no choice. We're cornered, so I have to teach you. First off, Johnny, let me tell you one thing. Starting now, you can only say the words, 'There is no way I can do this!' four times, and four times only. Alright? Four times. That's what my father taught me when I was a kid."
-
-

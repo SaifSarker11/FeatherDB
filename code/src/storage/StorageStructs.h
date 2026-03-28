@@ -17,6 +17,7 @@ namespace spl
         std::string name;
         std::string type; // "INT", "STRING"
         bool isPrimaryKey = false;
+        bool isUnique = false;
         std::string fkTargetTable = ""; // Empty if not a foreign key
     };
 

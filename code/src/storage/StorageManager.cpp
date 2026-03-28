@@ -35,6 +35,10 @@ namespace spl
             {
                 schemaFile << " FK " << col.fkTargetTable;
             }
+            if (col.isUnique)
+            {
+                schemaFile << " UNIQUE";
+            }
             schemaFile << "\n";
         }
         schemaFile.close();
@@ -90,6 +94,10 @@ namespace spl
                         col.fkTargetTable = targetTable;
                         table.foreignKeys.push_back({name, targetTable, "id"});
                     }
+                }
+                else if (extra == "UNIQUE")
+                {
+                    col.isUnique = true;
                 }
             }
             table.columns.push_back(col);
@@ -250,6 +258,10 @@ namespace spl
                         col.fkTargetTable = targetTable;
                         table.foreignKeys.push_back({name, targetTable, "id"});
                     }
+                }
+                else if (extra == "UNIQUE")
+                {
+                    col.isUnique = true;
                 }
             }
             table.columns.push_back(col);

@@ -27,7 +27,7 @@ CREATE ROLE wasi with secret 'omar';
 CREATE ROLE saif with secret 'saif';
 
 GRANT SELECT, delete ON student TO wasi;
-GRANT SELECT, insert, update ON pokemon, trainer TO saif;
+GRANT SELECT, insert, update ON pokemon TO saif;
 
 
 
